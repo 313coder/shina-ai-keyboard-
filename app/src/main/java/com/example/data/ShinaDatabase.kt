@@ -12,9 +12,18 @@ import androidx.room.RoomDatabase
         ClipboardEntity::class,
         VoiceContributionEntity::class,
         CommunityWordEntity::class,
-        LearnedPhraseEntity::class
+        LearnedPhraseEntity::class,
+        ShinaSentenceEntity::class,
+        ShinaConversionEntity::class,
+        ShinaGrammarRuleEntity::class,
+        ShinaPoetryEntity::class,
+        ShinaDialogueEntity::class,
+        ShinaMediaCorpusEntity::class,
+        ShinaModelTrainingMetricEntity::class,
+        ShinaAutoTrainingLogEntity::class,
+        ShinaDictionaryEntryEntity::class
     ],
-    version = 2,
+    version = 5,
     exportSchema = false
 )
 abstract class ShinaDatabase : RoomDatabase() {
@@ -24,6 +33,9 @@ abstract class ShinaDatabase : RoomDatabase() {
     abstract fun voiceContributionDao(): VoiceContributionDao
     abstract fun communityWordDao(): CommunityWordDao
     abstract fun learnedPhraseDao(): LearnedPhraseDao
+    abstract fun trainingDataDao(): TrainingDataDao
+    abstract fun dictionaryDao(): ShinaDictionaryDao
+    abstract fun historicalLearningDao(): HistoricalLearningDao
 
     companion object {
         @Volatile

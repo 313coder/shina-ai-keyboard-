@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collection": "users",
+      "path": "/users/{userId}",
+      "fields": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "UserVocabulary": {
+      "collection": "vocabulary",
+      "path": "/users/{userId}/vocabulary/{wordId}",
+      "fields": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "word": { "type": "string" },
+        "dialect": { "type": "string" },
+        "urduMeaning": { "type": "string" },
+        "englishMeaning": { "type": "string" },
+        "partOfSpeech": { "type": "string" },
+        "timestamp": { "type": "timestamp" }
+      }
+    },
+    "UserSentence": {
+      "collection": "sentences",
+      "path": "/users/{userId}/sentences/{sentenceId}",
+      "fields": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "sentenceShina": { "type": "string" },
+        "translationUrdu": { "type": "string" },
+        "dialect": { "type": "string" },
+        "category": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "timestamp": { "type": "timestamp" }
+      }
+    },
+    "UserGrammarRule": {
+      "collection": "grammar_rules",
+      "path": "/users/{userId}/grammar_rules/{ruleId}",
+      "fields": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "ruleTitle": { "type": "string" },
+        "ruleDescription": { "type": "string" },
+        "shinaExample": { "type": "string" },
+        "urduTranslation": { "type": "string" },
+        "category": { "type": "string" },
+        "timestamp": { "type": "timestamp" }
+      }
+    },
+    "BackupSyncMeta": {
+      "collection": "backup_metadata",
+      "path": "/users/{userId}/backup_metadata/sync_state",
+      "fields": {
+        "userId": { "type": "string" },
+        "lastBackupTimestamp": { "type": "timestamp" },
+        "totalWordsBackedUp": { "type": "number" },
+        "totalSentencesBackedUp": { "type": "number" },
+        "totalGrammarRulesBackedUp": { "type": "number" }
+      }
+    }
+  }
+}

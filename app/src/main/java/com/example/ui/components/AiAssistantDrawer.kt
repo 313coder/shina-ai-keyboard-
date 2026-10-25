@@ -61,11 +61,24 @@ fun AiAssistantDrawer(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Shina AI Writing Assistant",
-                        fontSize = 16.sp,
+                        text = "'SAIPBG' Shina AI Assistant",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "Grazina",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
                 }
                 IconButton(onClick = onClose) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
@@ -115,10 +128,22 @@ fun AiAssistantDrawer(
                     .padding(10.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center).size(24.dp),
-                        strokeWidth = 2.dp
-                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AiCompactButtonLoader(
+                            size = 24.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "'SAIPBG' Grazina AI thinking...",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 } else if (aiOutput.isBlank()) {
                     Text(
                         text = if (currentText.isBlank()) "Type or select text first, then tap an AI action above!" else "Tap an action above to generate AI output for:\n\"$currentText\"",

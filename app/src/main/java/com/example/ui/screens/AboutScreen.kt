@@ -16,8 +16,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,7 +70,7 @@ fun AboutScreen() {
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
                                     colors = listOf(
                                         androidx.compose.ui.graphics.Color.Transparent,
-                                        androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f)
+                                        androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.82f)
                                     )
                                 )
                             )
@@ -79,13 +81,13 @@ fun AboutScreen() {
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "SHINA AI KEYBOARD",
+                            text = "'SAIPBG' SHINA AI",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = androidx.compose.ui.graphics.Color.White
                         )
                         Text(
-                            text = "Preserving & Digitizing the Shina Language",
+                            text = "Power by Grazina • Preserving & Digitizing the Shina Language",
                             fontSize = 13.sp,
                             color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)
                         )
@@ -129,13 +131,13 @@ fun AboutScreen() {
 
                     Text(
                         text = "Zaigham Abbas",
-                        fontSize = 20.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Text(
-                        text = "Creator & Lead Developer of Shina AI",
+                        text = "Creator & Lead AI Engineer of 'SAIPBG' Shina AI",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
@@ -152,30 +154,77 @@ fun AboutScreen() {
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Gilgit-Baltistan, Pakistan 🇵🇰",
+                            text = "Gilgit-Baltistan, Pakistan 🇵🇰 • Power by Grazina",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
-
-                    Divider()
-
+                    HorizontalDivider()
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "Our Mission",
-                        fontSize = 14.sp,
+                        text = "Mission & Cultural Vision",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Preserve, digitize, and empower the Shina language using modern Artificial Intelligence, intelligent autocorrect, and voice dictation for future generations.",
+                        text = "Shina is an ancient Dardic language spoken across the mighty valleys of Gilgit, Astore, Diamer, Chilas, Punial, Ghizer, and Kohistan. For decades, Shina lacked native digital input keyboards, smart predictive models, and linguistic AI tools.\n\n'SAIPBG' Shina AI (Power by Grazina) was created by Zaigham Abbas to bridge this digital divide, bringing full modern AI assistance, phonetic voice dictation, on-device machine learning, and native keyboard support to millions of Shina speakers globally.",
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
+                        lineHeight = 18.sp,
                         color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        // --- Complete Feature Breakdown Matrix ---
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Stars, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Text("App Capabilities & Feature Matrix", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    FeatureItem(
+                        icon = Icons.Default.Keyboard,
+                        title = "Native Shina Nasta'liq & Arabic Keyboard",
+                        description = "50+ special Shina graphemes (ݜ, ڙ, ڇ, ݨ, ݩ, ݭ), number row, haptics, and custom themes."
+                    )
+                    FeatureItem(
+                        icon = Icons.Default.AutoAwesome,
+                        title = "Multilingual Gemini AI Writing Suite",
+                        description = "Contextual translation, grammar refinement, and content generation between Shina, Urdu, English, Balti, and Burushaski."
+                    )
+                    FeatureItem(
+                        icon = Icons.Default.Mic,
+                        title = "Phonetic Voice Typing & Speech Engine",
+                        description = "Real-time speech recognition tuned specifically for regional Shina phonetics and accents."
+                    )
+                    FeatureItem(
+                        icon = Icons.Default.Psychology,
+                        title = "On-Device AI Self-Training Studio",
+                        description = "Local machine learning engine that trains on verified sentences without sending private data to cloud servers."
+                    )
+                    FeatureItem(
+                        icon = Icons.Default.Insights,
+                        title = "User Contributions & Model Progress Tracker",
+                        description = "Visual impact tracking showing words added, sentences verified, vocabulary coverage, and accuracy gain."
+                    )
+                    FeatureItem(
+                        icon = Icons.Default.LaptopMac,
+                        title = "Desktop, Chromebook & DeX Universal Mode",
+                        description = "Adaptive Navigation Rail layout on wide screens, multi-window freeform support, and physical QWERTY transliteration."
                     )
                 }
             }
@@ -190,8 +239,11 @@ fun AboutScreen() {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Official Links & Social Media", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        TextButton(onClick = { showEditLinksDialog = true }) {
+                        Text("Official Links & Contact", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        TextButton(
+                            onClick = { showEditLinksDialog = true },
+                            modifier = Modifier.testTag("about_edit_links_btn")
+                        ) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit Links", modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Edit Links", fontSize = 12.sp)
@@ -200,10 +252,9 @@ fun AboutScreen() {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Official Website Link
                     ContactRow(
                         icon = Icons.Default.Public,
-                        label = "Official Website",
+                        label = "Official Portfolio & Website",
                         value = websiteUrl,
                         onClick = {
                             try {
@@ -215,7 +266,6 @@ fun AboutScreen() {
                         }
                     )
 
-                    // Facebook Account Link
                     ContactRow(
                         icon = Icons.Default.Share,
                         label = "Facebook Profile",
@@ -230,10 +280,9 @@ fun AboutScreen() {
                         }
                     )
 
-                    // Email Link
                     ContactRow(
                         icon = Icons.Default.Email,
-                        label = "Official Email Support",
+                        label = "Official Email Inquiries",
                         value = emailAddress,
                         onClick = {
                             try {
@@ -247,10 +296,9 @@ fun AboutScreen() {
                         }
                     )
 
-                    // GitHub / Portfolio Link
                     ContactRow(
                         icon = Icons.Default.Code,
-                        label = "Developer GitHub Repository",
+                        label = "Developer GitHub Profile",
                         value = githubUrl,
                         onClick = {
                             try {
@@ -261,6 +309,25 @@ fun AboutScreen() {
                             }
                         }
                     )
+                }
+            }
+        }
+
+        // --- Technical Specifications Card ---
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Technical Architecture", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Spacer(Modifier.height(8.dp))
+                    TechRow("Platform", "Android, ChromeOS & Desktop (Universal)")
+                    TechRow("UI Framework", "Jetpack Compose & Material 3")
+                    TechRow("Local Database", "Room SQLite with Migration V4")
+                    TechRow("AI Architecture", "Hybrid On-Device N-Gram Neural + Cloud Gemini")
+                    TechRow("Target Audience", "Gilgit-Baltistan & Global Shina Community")
                 }
             }
         }
@@ -282,7 +349,7 @@ fun AboutScreen() {
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Shina AI Keyboard v1.0.0 Pro • Created by Zaigham Abbas",
+                text = "Shina AI Keyboard v1.2.0 Universal • Created with ❤️ by Zaigham Abbas",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -382,8 +449,55 @@ fun AboutScreen() {
 }
 
 @Composable
+private fun FeatureItem(
+    icon: ImageVector,
+    title: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.size(36.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun TechRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
 fun ContactRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     value: String,
     onClick: () -> Unit

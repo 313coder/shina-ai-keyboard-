@@ -167,9 +167,9 @@ fun AiPipelineSimulatorSection(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (isProcessing) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    com.example.ui.components.AiCompactButtonLoader()
                     Spacer(Modifier.width(8.dp))
-                    Text("Executing Pipeline...")
+                    Text("Executing Pipeline with Grazina AI...")
                 } else {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(Modifier.width(8.dp))

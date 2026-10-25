@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-android-shinaaik-fb26b872-c8dd-47c0-a566-367b26e6fb48",
+      "rules": "firestore.rules"
+    }
+  ]
+}

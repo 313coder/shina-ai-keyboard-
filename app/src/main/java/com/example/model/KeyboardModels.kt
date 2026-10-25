@@ -74,7 +74,17 @@ data class KeyboardPreferences(
     val disableLearning: Boolean = false,
     val disableVoiceCollection: Boolean = false,
     val disableCloudAi: Boolean = false,
-    val offlineAiEnabled: Boolean = true
+    val offlineAiEnabled: Boolean = true,
+    val desktopModeEnabled: Boolean = true,
+    val desktopSideRailNavigation: Boolean = true,
+    val desktopPhysicalKeyboardTransliteration: Boolean = true,
+    val autoTrainFromAiChats: Boolean = true,
+    val contributionNotifications: Boolean = true,
+    val voiceAutoSpeakAiReplies: Boolean = false,
+    val speechSpeed: Float = 1.0f,
+    val autoExportBackupWeekly: Boolean = false,
+    val automaticCloudBackup: Boolean = true,
+    val systemWideDarkMode: Boolean = false
 )
 
 data class AiWritingRequest(

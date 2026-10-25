@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Shina AI Keyboard"
+rootProject.name = "'SAIPBG' shina AI power by grazina"
 
 include(":app")

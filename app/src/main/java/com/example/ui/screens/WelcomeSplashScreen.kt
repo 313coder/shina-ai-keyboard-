@@ -39,8 +39,8 @@ import kotlinx.coroutines.delay
 fun WelcomeSplashScreen(
     onSplashComplete: () -> Unit
 ) {
-    val fullTitleText = "Welcome to Shina AI Keyboard"
-    val fullSubtitleText = "Preserving & Modernizing the Shina Language with On-Device AI"
+    val fullTitleText = "'SAIPBG' Shina AI"
+    val fullSubtitleText = "Power by Grazina • Voice, Chat & Type in Shina"
     
     var typedTitleText by remember { mutableStateOf("") }
     var typedSubtitleText by remember { mutableStateOf("") }
@@ -79,20 +79,20 @@ fun WelcomeSplashScreen(
         // 2. Typewriter animation for title
         for (i in 1..fullTitleText.length) {
             typedTitleText = fullTitleText.substring(0, i)
-            delay(50) // typing speed
+            delay(40) // typing speed
         }
         isTitleFinished = true
-        delay(300)
+        delay(250)
 
         // 3. Typewriter animation for subtitle
         for (i in 1..fullSubtitleText.length) {
             typedSubtitleText = fullSubtitleText.substring(0, i)
-            delay(30)
+            delay(25)
         }
         isSubtitleFinished = true
 
         // 4. Auto-advance after animation completes
-        delay(1200)
+        delay(1400)
         onSplashComplete()
     }
 
@@ -248,7 +248,16 @@ fun WelcomeSplashScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Professional AI Neural Wave Visualizer
+            com.example.ui.components.AiWaveVisualizerBars(
+                barCount = 7,
+                activeColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.height(18.dp)
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
 
             // Skip / Launch Button
             Button(
@@ -264,7 +273,7 @@ fun WelcomeSplashScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isSubtitleFinished) "Open Keyboard Studio" else "Skip",
+                    text = if (isSubtitleFinished) "Enter 'SAIPBG' Shina AI" else "Skip",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )

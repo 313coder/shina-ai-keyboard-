@@ -1,6 +1,6 @@
 {
-  "name": "Shina AI Keyboard",
-  "description": "The world's first AI Keyboard specifically designed for the Shina language by Zaigham Abbas (Gilgit-Baltistan, Pakistan). Features Shina layouts, smart autocorrect, voice typing, on-device AI language learning, dialect support, and Gemini AI writing assistant.",
+  "name": "'SAIPBG' shina AI power by grazina",
+  "description": "'SAIPBG' Shina AI power by Grazina - The world's first AI Keyboard and intelligence platform specifically designed for the Shina language by Zaigham Abbas (Gilgit-Baltistan, Pakistan). Features Shina layouts, smart autocorrect, voice typing, on-device AI language learning, dialect support, and Grazina Gemini AI engine.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

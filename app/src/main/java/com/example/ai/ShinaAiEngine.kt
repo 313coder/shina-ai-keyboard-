@@ -163,8 +163,58 @@ class ShinaAiEngine(
         }
     }
 
-    private fun generateOfflineAiFallback(request: AiWritingRequest): String {
+    private suspend fun generateOfflineAiFallback(request: AiWritingRequest): String {
         val input = request.prompt.ifBlank { "سلام! مئے نام گلگت ہن۔" }
+        val trainingDao = database.trainingDataDao()
+
+        // 1. Check trained dialogues for chat requests
+        if (request.action == "Chat") {
+            try {
+                val dialogues = trainingDao.getAllDialogues().firstOrNull()
+                if (!dialogues.isNullOrEmpty()) {
+                    val match = dialogues.firstOrNull { d ->
+                        input.contains(d.speakerAText.trim(), ignoreCase = true) ||
+                        d.speakerAText.trim().contains(input.trim(), ignoreCase = true)
+                    }
+                    if (match != null) {
+                        return "${match.speakerBReply}\n\n[Trained Shina AI Offline Match • ${match.scenario}]"
+                    }
+                }
+            } catch (e: Exception) {
+                // fallback to rules
+            }
+        }
+
+        // 2. Check trained poetry for poem requests
+        if (request.contentType == "Poems") {
+            try {
+                val poems = trainingDao.getAllPoetry().firstOrNull()
+                if (!poems.isNullOrEmpty()) {
+                    val p = poems.first()
+                    return "شینا شاعری: ${p.title} (${p.poetryType})\nشاعر: ${p.poetName}\n\n${p.versesShina}\n\nترجمہ / معانی:\n${p.translationUrduEnglish}"
+                }
+            } catch (e: Exception) {
+                // fallback
+            }
+        }
+
+        // 3. Check trained conversions for translation requests
+        if (request.action == "Translate") {
+            try {
+                val conversions = trainingDao.getAllConversions().firstOrNull()
+                if (!conversions.isNullOrEmpty()) {
+                    val match = conversions.firstOrNull { c ->
+                        c.sourceText.contains(input, ignoreCase = true) || input.contains(c.sourceText, ignoreCase = true)
+                    }
+                    if (match != null) {
+                        return "شینا ترجمہ:\n\"${match.sourceText}\" -> ${match.targetShinaText}\n(${match.dialect} Shina • Trained Conversion)"
+                    }
+                }
+            } catch (e: Exception) {
+                // fallback
+            }
+        }
+
         return when (request.action) {
             "Translate" -> when (request.targetLanguage) {
                 "Shina" -> "شینا ترجمہ:\n\"$input\" -> سلام! ایہہ شینا زبانہِ ترجمہ ہن۔"
@@ -175,7 +225,7 @@ class ShinaAiEngine(
                 "Khowar" -> "Khowar Translation:\n\"$input\" -> Jam haat (Khowar dialect)"
                 "Arabic" -> "الترجمة إلى العربية:\n\"$input\" -> السلام عليكم ورحمة الله"
                 "Chinese" -> "中文翻译:\n\"$input\" -> 你好！这是希纳语翻译。"
-                "Hindi" -> "हिंदी अनुवाद:\n\"$input\" -> यह शीना भाषा का अनुवाद है।"
+                "Hindi" -> "हिंदी अनुवाद:\n\"$input\" -> यह शीنا भाषा کا অনুবাদ ہے।"
                 else -> "Translated ($request.targetLanguage):\n\"$input\""
             }
             "Rewrite" -> when (request.tone) {
@@ -201,6 +251,31 @@ class ShinaAiEngine(
                 "Assignments" -> "Assignment Topic: Digitizing Endemic Northern Languages\nKey Focus: $input"
                 "Blogs" -> "Blog Post: How Artificial Intelligence is Preserving Northern Languages\n\n$input"
                 else -> "Generated Content ($request.contentType):\n$input"
+            }
+            "Chat" -> {
+                val lower = input.lowercase()
+                when {
+                    lower.contains("سلام") || lower.contains("hello") || lower.contains("hi") || lower.contains("hey") ->
+                        "سلام! تو کیچو ہنو؟ مئے نام شینا اے آئی ہن۔ (Peace be upon you! How are you? I am Shina AI. I can chat and talk with you in Shina, Urdu, and English!)"
+                    lower.contains("کیچو") || lower.contains("how are you") || lower.contains("کیسے ہو") ->
+                        "مئے بالکل شُو ہنو، مہربانی! تو کیچو ہنو؟ (I am doing very well, thank you! How are you? How can I assist you with Shina language today?)"
+                    lower.contains("نام") || lower.contains("name") || lower.contains("who are you") ->
+                        "مئے نام شینا اے آئی ہن۔ I was crafted by Zaigham Abbas in Gilgit-Baltistan to help people talk, write, learn, and preserve the beautiful Shina language!"
+                    lower.contains("گلگت") || lower.contains("gilgit") || lower.contains("بلتستان") || lower.contains("baltistan") ->
+                        "گلگت بلتستان شینا زبانہِ وطن ہن! (Gilgit-Baltistan is the heartland of the Shina language). It is famous for Rakaposhi, K2, Nanga Parbat, pristine lakes, and warm, hospitable people."
+                    lower.contains("تاریخ") || lower.contains("history") || lower.contains("زبان") || lower.contains("language") ->
+                        "شینا زباں (Shina) is an ancient Dardic language spoken across Gilgit, Astore, Diamer, Ghizer, Kohistan, Gurez, and Dras. It has unique sounds like ݜ, ݗ, ڇ, and ڙ."
+                    lower.contains("شکریہ") || lower.contains("thank") || lower.contains("مہربانی") ->
+                        "بڑا شُو! توئے مہربانی ہن (You are most welcome! Happy to chat and talk with you anytime)."
+                    lower.contains("صبح") || lower.contains("morning") ->
+                        "صبح مبارک! (Subah Mubarak!) شینا میں آپ کہہ سکتے ہیں: 'شُو سہیلو' (Shoo Sahelo - Good morning)!"
+                    lower.contains("رات") || lower.contains("night") ->
+                        "شُو راتی! (Shoo Rati - Good night!). Sleep peacefully with sweet mountain dreams."
+                    lower.contains("کھانا") || lower.contains("food") || lower.contains("چا") || lower.contains("tea") ->
+                        "شینا میں چائے کو 'چا' (Chaa) اور کھانے کو 'روئی' (Roi) کہتے ہیں۔ توئے چا پیلی؟ (Did you have tea?)"
+                    else ->
+                        "شینا اے آئی: آپ کے سوال \"$input\" کے بارے میں: شینا زباں آن ایہہ بڑا اہم ہن۔ I am glad to converse with you. Ask me any word, sentence translation, or speak into the mic to talk with me in Shina!"
+                }
             }
             "Voice" -> "Voice Recognition Output (Dialect: Gilgit Shina):\n\"$input\""
             else -> "AI Assistant Response:\n$input"

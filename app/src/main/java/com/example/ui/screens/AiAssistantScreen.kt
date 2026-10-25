@@ -1,14 +1,24 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,23 +27,36 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.testTag
 import com.example.ai.ShinaAiEngine
+import com.example.ai.ShinaAiTrainingEngine
+import com.example.data.ShinaKeyboardRepository
 import com.example.model.AiWritingRequest
+import com.example.ui.components.AiCompactButtonLoader
+import com.example.ui.components.AiThinkingBubble
+import com.example.ui.components.AiQuantumOrbLoader
+import com.example.voice.ShinaPhoneticSpeechService
+import com.example.voice.ShinaPhoneticVoiceDialog
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
 fun AiAssistantScreen(
-    aiEngine: ShinaAiEngine
+    aiEngine: ShinaAiEngine,
+    repository: ShinaKeyboardRepository? = null,
+    trainingEngine: ShinaAiTrainingEngine? = null,
+    onOpenTrainingStudio: () -> Unit = {},
+    onOpenContributions: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("AI Rewrite", "AI Translate", "AI Chat", "AI Writing", "AI Voice", "Dictionary & Vision")
+    val tabs = listOf("AI Chat & Talk", "AI Voice", "AI Translate", "AI Rewrite", "AI Writing", "Training Studio", "Model Impact", "Dictionary & Vision")
 
     Column(
         modifier = Modifier
@@ -55,12 +78,47 @@ fun AiAssistantScreen(
         }
 
         when (selectedTab) {
-            0 -> AiRewriteTab(aiEngine)
-            1 -> AiTranslateTab(aiEngine)
-            2 -> AiChatTab(aiEngine)
-            3 -> AiWritingTab(aiEngine)
-            4 -> AiVoiceTab(aiEngine)
-            5 -> AiDictionaryVisionTab(aiEngine)
+            0 -> AiChatTab(
+                aiEngine = aiEngine,
+                trainingEngine = trainingEngine,
+                onOpenTrainingStudio = { selectedTab = 5 },
+                onOpenContributions = { selectedTab = 6 }
+            )
+            1 -> AiVoiceTab(aiEngine)
+            2 -> AiTranslateTab(aiEngine)
+            3 -> AiRewriteTab(aiEngine)
+            4 -> AiWritingTab(aiEngine)
+            5 -> {
+                if (repository != null && trainingEngine != null) {
+                    ShinaTrainingStudioScreen(
+                        repository = repository,
+                        aiEngine = aiEngine,
+                        trainingEngine = trainingEngine,
+                        onNavigateBack = { selectedTab = 0 },
+                        onOpenContributions = { selectedTab = 6 }
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Training Studio Initializing...")
+                    }
+                }
+            }
+            6 -> {
+                if (repository != null && trainingEngine != null) {
+                    UserContributionStatsScreen(
+                        repository = repository,
+                        aiEngine = aiEngine,
+                        trainingEngine = trainingEngine,
+                        onNavigateBack = { selectedTab = 0 },
+                        onNavigateToStudio = { selectedTab = 5 }
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Contribution Analytics Initializing...")
+                    }
+                }
+            }
+            7 -> AiDictionaryVisionTab(aiEngine)
         }
     }
 }
@@ -141,9 +199,9 @@ fun AiRewriteTab(aiEngine: ShinaAiEngine) {
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    AiCompactButtonLoader()
                     Spacer(Modifier.width(8.dp))
-                    Text("Rewriting...")
+                    Text("Rewriting with Grazina AI...")
                 } else {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
@@ -254,9 +312,9 @@ fun AiTranslateTab(aiEngine: ShinaAiEngine) {
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    AiCompactButtonLoader()
                     Spacer(Modifier.width(8.dp))
-                    Text("Translating...")
+                    Text("Translating with Grazina AI...")
                 } else {
                     Icon(Icons.Default.GTranslate, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
@@ -291,123 +349,690 @@ fun AiTranslateTab(aiEngine: ShinaAiEngine) {
     }
 }
 
-// ---------------- 3. AI CHAT TAB (ChatGPT Style) ----------------
-data class ChatMessage(val sender: String, val text: String, val isUser: Boolean, val timestamp: String = "Just now")
+// ---------------- 3. AI CHAT & TALK TAB ----------------
+data class ChatMessage(
+    val sender: String,
+    val text: String,
+    val isUser: Boolean,
+    val timestamp: String = "Just now"
+)
 
 @Composable
-fun AiChatTab(aiEngine: ShinaAiEngine) {
+fun AiChatTab(
+    aiEngine: ShinaAiEngine,
+    trainingEngine: ShinaAiTrainingEngine? = null,
+    onOpenTrainingStudio: () -> Unit = {},
+    onOpenContributions: () -> Unit = {}
+) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var chatMode by remember { mutableStateOf("Text Chat") } // Text Chat, Voice Chat, Image Chat, Doc Chat, Offline AI
+    val clipboardManager = LocalClipboardManager.current
+    val listState = rememberLazyListState()
+
+    var chatMode by remember { mutableStateOf("Text Chat") } // "Text Chat", "Voice Talk", "Offline AI"
+    var selectedDialect by remember { mutableStateOf("Gilgit Shina") }
+    var autoSpeakReplies by remember { mutableStateOf(true) }
+    var isVoiceListening by remember { mutableStateOf(false) }
+    var showShinaVoiceDialog by remember { mutableStateOf(false) }
+    var lastAutoTrainFeedback by remember { mutableStateOf<String?>(null) }
+
     var messages by remember {
         mutableStateOf(
             listOf(
-                ChatMessage("Shina AI", "سلام! مئے نام شینا اے آئی اسسٹنٹ ہن۔ how can I assist you today in Shina, Urdu, or English?", isUser = false)
+                ChatMessage(
+                    sender = "Shina AI",
+                    text = "سلام! تو کیچو ہنو؟ مئے نام شینا اے آئی ہن۔ I am your personal Shina AI companion. You can chat with me, talk using voice, or ask any question about Shina language and Gilgit-Baltistan culture!",
+                    isUser = false
+                )
             )
         )
     }
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        // Mode selector
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
-            val modes = listOf("Text Chat", "Voice Chat", "Image Chat", "Document Chat", "Offline AI Chat")
+    // Text-to-Speech Engine
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
+    var isTtsReady by remember { mutableStateOf(false) }
+
+    DisposableEffect(context) {
+        val tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                isTtsReady = true
+                ttsEngine?.language = Locale.ENGLISH
+            }
+        }
+        ttsEngine = tts
+        onDispose {
+            tts.stop()
+            tts.shutdown()
+        }
+    }
+
+    fun speakText(textToSpeak: String) {
+        val cleaned = textToSpeak
+            .replace(Regex("[\"#*✨🏔️👇🌸]"), "")
+            .trim()
+        ttsEngine?.speak(cleaned, TextToSpeech.QUEUE_FLUSH, null, "shina_ai_chat_response")
+    }
+
+    // Android Speech Recognition Intent Launcher with Shina Phonetic Processing
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isVoiceListening = false
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val spokenMatches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            val spokenText = spokenMatches?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                val phoneticResult = ShinaPhoneticSpeechService.transcribeToShinaPhonetics(spokenText, selectedDialect)
+                inputText = phoneticResult.phoneticText
+                Toast.makeText(context, "Shina Phonetics: ${phoneticResult.phoneticText}", Toast.LENGTH_SHORT).show()
+                // Auto-train on voice input
+                scope.launch {
+                    trainingEngine?.autoTrainFromInteraction(
+                        inputText = phoneticResult.phoneticText,
+                        responseText = null,
+                        dialect = selectedDialect,
+                        source = "Voice Talk"
+                    )
+                    lastAutoTrainFeedback = "Auto-learned from voice: \"${phoneticResult.phoneticText.take(25)}\""
+                }
+            }
+        }
+    }
+
+    fun launchVoiceRecognition() {
+        showShinaVoiceDialog = true
+    }
+
+    fun sendMessage(userMsg: String) {
+        if (userMsg.isBlank() || isLoading) return
+        val trimmed = userMsg.trim()
+        inputText = ""
+        messages = messages + ChatMessage("You", trimmed, isUser = true)
+
+        scope.launch {
+            isLoading = true
+            val response = aiEngine.generateAiWritingResponse(
+                AiWritingRequest(
+                    prompt = trimmed,
+                    action = "Chat",
+                    targetLanguage = selectedDialect,
+                    tone = "Friendly"
+                )
+            )
+            val aiMsg = ChatMessage("Shina AI", response.resultText, isUser = false)
+            messages = messages + aiMsg
+            isLoading = false
+            listState.animateScrollToItem((messages.size - 1).coerceAtLeast(0))
+
+            // Automatic Training on user chat interaction
+            trainingEngine?.autoTrainFromInteraction(
+                inputText = trimmed,
+                responseText = response.resultText,
+                dialect = selectedDialect,
+                source = "AI Chat"
+            )
+            val wordCount = trimmed.split(Regex("\\s+")).filter { it.isNotBlank() }.size
+            lastAutoTrainFeedback = "Auto-trained Shina AI: +$wordCount words & n-grams learned"
+
+            if (autoSpeakReplies && isTtsReady) {
+                speakText(response.resultText)
+            }
+        }
+    }
+
+    // Voice Visualizer Waves Animation
+    val infiniteTransition = rememberInfiniteTransition(label = "audio_waves")
+    val waveScale1 by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(tween(400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "w1"
+    )
+    val waveScale2 by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(tween(550, easing = LinearEasing), RepeatMode.Reverse),
+        label = "w2"
+    )
+    val waveScale3 by infiniteTransition.animateFloat(
+        initialValue = 0.2f, targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(350, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "w3"
+    )
+    val waveScale4 by infiniteTransition.animateFloat(
+        initialValue = 0.4f, targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(tween(480, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "w4"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        // --- Top Header Card: Shina AI Assistant Status & Voice Toggle ---
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shadowElevation = 1.dp,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "Shina AI Avatar",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "'SAIPBG' Shina AI",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.primary
+                            ) {
+                                Text(
+                                    text = "Power by Grazina",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Chatting & Talking in $selectedDialect",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Auto-Speak Toggle
+                    IconButton(
+                        onClick = {
+                            autoSpeakReplies = !autoSpeakReplies
+                            if (!autoSpeakReplies) ttsEngine?.stop()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (autoSpeakReplies) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                            contentDescription = if (autoSpeakReplies) "Auto-Speak Voice ON" else "Voice Muted",
+                            tint = if (autoSpeakReplies) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                        )
+                    }
+
+                    // Reset / Clear Chat
+                    IconButton(
+                        onClick = {
+                            ttsEngine?.stop()
+                            messages = listOf(
+                                ChatMessage(
+                                    sender = "Shina AI",
+                                    text = "سلام! نیا گفتگو شروع کریں۔ How can I help you in Shina today?",
+                                    isUser = false
+                                )
+                            )
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Clear Chat",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- Live Auto-Training Status Banner ---
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
+                .clickable { onOpenTrainingStudio() }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = lastAutoTrainFeedback ?: "Auto-Training Active: Shina AI learns from every chat & voice talk",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        maxLines = 1
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .clickable { onOpenContributions() }
+                    ) {
+                        Text(
+                            text = "My Impact →",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { onOpenTrainingStudio() }
+                    ) {
+                        Text(
+                            text = "Data Hub →",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- Dialect & Mode Selector Chips ---
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            val modes = listOf("Text Chat", "Voice Talk", "Offline AI")
             items(modes) { mode ->
                 FilterChip(
                     selected = chatMode == mode,
                     onClick = { chatMode = mode },
-                    label = { Text(mode, fontSize = 12.sp) },
+                    label = { Text(mode, fontSize = 11.sp) },
                     leadingIcon = {
                         val icon = when (mode) {
-                            "Voice Chat" -> Icons.Default.Mic
-                            "Image Chat" -> Icons.Default.Image
-                            "Document Chat" -> Icons.Default.Description
-                            "Offline AI Chat" -> Icons.Default.WifiOff
+                            "Voice Talk" -> Icons.Default.Mic
+                            "Offline AI" -> Icons.Default.WifiOff
                             else -> Icons.Default.Chat
                         }
-                        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
                     }
+                )
+            }
+
+            item {
+                VerticalDivider(modifier = Modifier.height(24.dp).padding(horizontal = 4.dp))
+            }
+
+            val dialects = listOf("Gilgit Shina", "Astore Shina", "Diamer/Chilas", "Kohistani")
+            items(dialects) { dialect ->
+                FilterChip(
+                    selected = selectedDialect == dialect,
+                    onClick = { selectedDialect = dialect },
+                    label = { Text(dialect, fontSize = 11.sp) }
                 )
             }
         }
 
-        // Message List
+        // --- Interactive Voice Talking Panel (Active when Voice Talk is selected or microphone pressed) ---
+        AnimatedVisibility(visible = chatMode == "Voice Talk" || isVoiceListening) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Talking with Shina AI Voice", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        TextButton(onClick = { chatMode = "Text Chat"; isVoiceListening = false }) {
+                            Text("Switch to Text", fontSize = 11.sp)
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Audio Waveform Equalizer Display
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        listOf(waveScale1, waveScale2, waveScale3, waveScale4, waveScale2, waveScale1).forEach { scale ->
+                            Box(
+                                modifier = Modifier
+                                    .width(6.dp)
+                                    .height((36 * scale).dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(MaterialTheme.colorScheme.secondary)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        text = if (isVoiceListening) "Listening to you... Speak in Shina or Urdu" else "Tap Mic or pick a spoken phrase below to talk:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Quick Spoken Prompts in Shina
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val spokenPhrases = listOf(
+                            "سلام! تو کیچو ہنو؟",
+                            "گلگت بلتستان شُو ہنو",
+                            "شینا زبانہِ تاریخ کی ہن؟",
+                            "How to say 'Thank you' in Shina?",
+                            "شینا میں چائے کو کیا کہتے ہیں؟"
+                        )
+                        items(spokenPhrases) { phrase ->
+                            SuggestionChip(
+                                onClick = { sendMessage(phrase) },
+                                label = { Text(phrase, fontSize = 11.sp) },
+                                icon = { Icon(Icons.Default.VolumeUp, contentDescription = null, modifier = Modifier.size(13.dp)) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Message Conversation Stream ---
         LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(messages) { msg ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = if (msg.isUser) Arrangement.End else Arrangement.Start
                 ) {
+                    if (!msg.isUser) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "AI",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
+
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (msg.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = if (msg.isUser) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
                         ),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.widthIn(max = 280.dp)
+                        shape = RoundedCornerShape(
+                            topStart = 16.dp,
+                            topEnd = 16.dp,
+                            bottomStart = if (msg.isUser) 16.dp else 4.dp,
+                            bottomEnd = if (msg.isUser) 4.dp else 16.dp
+                        ),
+                        modifier = Modifier.widthIn(max = 290.dp)
                     ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text(
-                                text = if (msg.isUser) "You" else "Shina AI Assistant",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (msg.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(2.dp))
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (msg.isUser) "You" else "Shina AI ($selectedDialect)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (msg.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = msg.timestamp,
+                                    fontSize = 10.sp,
+                                    color = if (msg.isUser) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+
+                            Spacer(Modifier.height(4.dp))
+
                             Text(
                                 text = msg.text,
                                 fontSize = 13.sp,
+                                lineHeight = 19.sp,
                                 color = if (msg.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            // Action buttons on Shina AI message: Speak aloud & Copy
+                            if (!msg.isUser) {
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { speakText(msg.text) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.VolumeUp,
+                                            contentDescription = "Listen to Shina AI speak",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            clipboardManager.setText(AnnotatedString(msg.text))
+                                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Copy message",
+                                            tint = MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (msg.isUser) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "User",
+                                tint = MaterialTheme.colorScheme.onSecondary,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
                 }
             }
+
             if (isLoading) {
                 item {
-                    Text("Shina AI is thinking...", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+                    AiThinkingBubble(
+                        customText = "'SAIPBG' Grazina AI is composing authentic Shina in $selectedDialect..."
+                    )
                 }
             }
         }
 
-        // Input bar
+        // --- Quick Prompts Starter Chips ---
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(vertical = 6.dp)
+        ) {
+            val quickPrompts = listOf(
+                "تو کیچو ہنو؟",
+                "گلگت بلتستان کے بارے میں بتاؤ",
+                "شینا زبان کے 5 الفاظ سکھائیں",
+                "شُو سہیلو (Good morning)",
+                "شکریہ کو شینا میں کیا کہتے ہیں؟",
+                "شینا محاورے (Proverbs)"
+            )
+            items(quickPrompts) { prompt ->
+                SuggestionChip(
+                    onClick = { sendMessage(prompt) },
+                    label = { Text(prompt, fontSize = 11.sp) }
+                )
+            }
+        }
+
+        // --- Shina Phonetics Voice-to-Text Recognition Dialog ---
+        if (showShinaVoiceDialog) {
+            ShinaPhoneticVoiceDialog(
+                initialDialect = selectedDialect,
+                onDismiss = { showShinaVoiceDialog = false },
+                onTextTranscribed = { transcribedShina, autoSend ->
+                    inputText = transcribedShina
+                    showShinaVoiceDialog = false
+                    scope.launch {
+                        trainingEngine?.autoTrainFromInteraction(
+                            inputText = transcribedShina,
+                            responseText = null,
+                            dialect = selectedDialect,
+                            source = "Voice Talk"
+                        )
+                        lastAutoTrainFeedback = "Auto-trained Shina AI from voice: \"${transcribedShina.take(25)}\""
+                    }
+                    if (autoSend) {
+                        sendMessage(transcribedShina)
+                    }
+                }
+            )
+        }
+
+        // --- Bottom Chat & Voice Input Bar ---
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text(if (chatMode == "Voice Chat") "Speak or type prompt..." else "Ask AI anything...") },
-                shape = RoundedCornerShape(24.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            FloatingActionButton(
-                onClick = {
-                    if (inputText.isBlank()) return@FloatingActionButton
-                    val userMsg = inputText
-                    inputText = ""
-                    messages = messages + ChatMessage("You", userMsg, isUser = true)
-                    scope.launch {
-                        isLoading = true
-                        val res = aiEngine.generateAiWritingResponse(
-                            AiWritingRequest(
-                                prompt = userMsg,
-                                action = "Chat",
-                                tone = "Friendly"
-                            )
-                        )
-                        messages = messages + ChatMessage("Shina AI", res.resultText, isUser = false)
-                        isLoading = false
-                    }
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("ai_chat_input_text_field"),
+                placeholder = {
+                    Text(
+                        text = if (chatMode == "Voice Talk") "Speak into mic or type in Shina..." else "Ask or talk to Shina AI...",
+                        fontSize = 13.sp
+                    )
                 },
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(26.dp),
+                trailingIcon = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        // Microphone icon button in the AI chat text input field
+                        IconButton(
+                            onClick = { showShinaVoiceDialog = true },
+                            modifier = Modifier.testTag("shina_voice_input_button")
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (isVoiceListening) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = if (isVoiceListening) Icons.Default.GraphicEq else Icons.Default.Mic,
+                                        contentDescription = "Shina Phonetic Voice-to-Text",
+                                        tint = if (isVoiceListening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            FloatingActionButton(
+                onClick = { sendMessage(inputText) },
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag("send_chat_message_button"),
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Send")
+                Icon(
+                    imageVector = Icons.Default.Send,
+                    contentDescription = "Send",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     }
@@ -489,7 +1114,7 @@ fun AiWritingTab(aiEngine: ShinaAiEngine) {
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    AiCompactButtonLoader()
                     Spacer(Modifier.width(8.dp))
                     Text("Generating $selectedCategory...")
                 } else {
@@ -723,7 +1348,15 @@ fun AiDictionaryVisionTab(aiEngine: ShinaAiEngine) {
 
         if (isDictLoading) {
             item {
-                CircularProgressIndicator()
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AiQuantumOrbLoader(
+                        size = 85.dp,
+                        statusText = "Querying 'SAIPBG' Shina Neural Dictionary..."
+                    )
+                }
             }
         } else if (dictResult.isNotBlank()) {
             item {

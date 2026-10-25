@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,7 +32,8 @@ fun KeyboardPlaygroundScreen(
     repository: ShinaKeyboardRepository,
     aiEngine: ShinaAiEngine,
     preferences: KeyboardPreferences,
-    onPreferenceChange: (KeyboardPreferences) -> Unit
+    onPreferenceChange: (KeyboardPreferences) -> Unit,
+    onOpenDictionary: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -175,6 +177,15 @@ fun KeyboardPlaygroundScreen(
                     Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy to Clipboard", modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Copy Clip", fontSize = 12.sp)
+                }
+
+                TextButton(
+                    onClick = onOpenDictionary,
+                    modifier = Modifier.testTag("playground_open_dictionary_btn")
+                ) {
+                    Icon(imageVector = Icons.Default.MenuBook, contentDescription = "Dictionary", modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Dictionary", fontSize = 12.sp)
                 }
 
                 TextButton(

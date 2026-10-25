@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /vocabulary/{wordId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /sentences/{sentenceId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /grammar_rules/{ruleId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /backup_metadata/{metaId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
